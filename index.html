@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BiDEL 장비 예약</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1c2230;--mute:#6b7280;--line:#e4e7ec;--pri:#1f5fd6;--pri2:#e3ecfc;
+--warn:#92400e;--warnbg:#fef3c7;--bad:#b42318;--badbg:#fee4e2;--ok:#05603a;--okbg:#d1fadf;--mine:#ece7fb;--taken:#eef0f3}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+header{background:#141a26;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:0;z-index:5}
+header b{font-size:16px} header span{font-size:13px;opacity:.85;text-align:right}
+header .out{background:none;border:1px solid #ffffff55;color:#fff;font-size:12px;padding:4px 10px;margin-left:8px}
+#gbtn{margin:16px 0 4px;min-height:44px}
+nav{display:flex;gap:4px;padding:8px 12px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:46px;z-index:4}
+nav button{border:0;background:none;padding:8px 12px;border-radius:8px;font-size:14px;color:var(--mute);white-space:nowrap;cursor:pointer}
+nav button.on{background:var(--pri2);color:var(--pri);font-weight:600}
+main{max-width:760px;margin:0 auto;padding:12px 16px 80px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+h2.sec{font-size:14px;color:var(--mute);margin:18px 2px 8px;font-weight:600}
+h3{margin:0 0 8px;font-size:16px}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+label.chk{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:14px;background:var(--badbg);padding:10px;border-radius:8px}
+label.chk input{margin-top:3px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;background:#fff}
+button{font-family:inherit;font-size:14px;padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer}
+button.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600}
+button.danger{color:var(--bad);border-color:#f3c3be}
+button:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.notice{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--warnbg);color:var(--warn);font-size:14px}
+.notice.bad{background:var(--badbg);color:var(--bad);font-weight:600}
+.notice.ok{background:var(--okbg);color:var(--ok)}
+.mute{color:var(--mute)} .small{font-size:12px}
+.weeknav{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.weeknav button{padding:6px 14px;font-size:18px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:10px 0 6px}
+.days button{padding:6px 0;font-size:13px;line-height:1.2}
+.days button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.days button.today{border-color:var(--pri)}
+.slots{max-height:58vh;overflow-y:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px}
+.slot{display:flex;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);min-height:36px;font-size:13px}
+.slot:last-child{border-bottom:0}
+.slot .t{width:44px;color:var(--mute);flex:none;font-variant-numeric:tabular-nums}
+.slot .l{flex:1;min-width:0;overflow-wrap:anywhere}
+.slot.free{cursor:pointer} .slot.free:hover{background:#f7f9fd}
+.slot.sel{background:var(--pri2)!important}
+.slot.taken{background:var(--taken)} .slot.mine{background:var(--mine)}
+.slot.taken.click,.slot.mine{cursor:pointer}
+.slot.dis{background:#fafafa;color:#b8bec8} .slot.dis .t{color:#c5cad3}
+.bar{height:10px;background:var(--taken);border-radius:6px;overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;background:var(--pri)} .bar i.full{background:var(--bad)}
+.badge{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--taken);color:var(--mute);margin:2px 4px 2px 0}
+.badge.bad{background:var(--badbg);color:var(--bad);font-weight:600}
+.badge x{cursor:pointer;margin-left:4px;color:var(--bad)}
+.urow{border-top:1px solid var(--line);padding:10px 0}
+.urow:first-of-type{border-top:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.eqchk{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:6px}
+.eqchk label{display:flex;gap:6px;align-items:center;color:var(--ink);font-size:14px;margin:4px 0}
+.eqchk input{width:auto}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(120px);background:#141a26;color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);transition:transform .25s;z-index:10}
+#toast.show{transform:translateX(-50%) translateY(0)} #toast.bad{background:var(--bad)}
+</style>
+</head>
+<body>
+<header><b>BiDEL 장비 예약</b><span><span id="who"></span><button class="out" id="outBtn" style="display:none" onclick="signOut()">로그아웃</button></span></header>
+<nav id="tabs"></nav>
+<main id="app"><div class="card mute">불러오는 중…</div></main>
+<div id="toast"></div>
+
+<script>
+/* ▼▼▼ Apps Script 웹 앱 URL (배포 후 여기에 붙여넣기) ▼▼▼ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbyO5xV3tKD1FsOwataBfX0LIXHBNg0mzUD5KiVazwcBaN5waE9xXnedggEM1B70lYJo/exec';
+/* ▲▲▲ */
+
+const KST = 9 * 3600e3, DAY = 864e5, DOW = '일월화수목금토', TOK_KEY = 'bidel_token';
+let B = null, RES = {}, loadToken = 0, TOKEN = null, CLIENT_ID = '', gsiReady = false;
+const cur = { tab: 'book', equip: null, ws: 0, day: 0, sel: null, week: null };
+
+const $ = s => document.querySelector(s);
+async function call(fn, ...args) {
+  let j;
+  try {
+    const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: fn, token: TOKEN, args }) });
+    j = await r.json();
+  } catch (e) {
+    throw new Error('서버에 연결할 수 없습니다. 웹 앱 URL과 배포 설정(액세스: 모든 사용자)을 확인해 주세요.');
+  }
+  if (!j.ok) {
+    const e = new Error(j.error); e.code = j.code;
+    if (j.code === 'AUTH' && fn !== 'config') signOut(j.error);
+    throw e;
+  }
+  return j.data;
+}
+
+/* ── 로그인 ── */
+function tokExp(t) {
+  try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).exp * 1000; } catch (e) { return 0; }
+}
+function saveTok(t) { try { localStorage.setItem(TOK_KEY, t); } catch (e) {} }
+function loadTok() {
+  let t = null;
+  try { t = localStorage.getItem(TOK_KEY); } catch (e) {}
+  return t && tokExp(t) > Date.now() + 60e3 ? t : null;
+}
+function withGsi(cb) {
+  if (window.google && google.accounts && google.accounts.id) {
+    if (!gsiReady) {
+      google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential, auto_select: true, cancel_on_tap_outside: false });
+      gsiReady = true;
+    }
+    cb();
+  } else setTimeout(() => withGsi(cb), 100);
+}
+function onCredential(r) { TOKEN = r.credential; saveTok(TOKEN); start(); }
+function showSignIn(msg) {
+  $('#tabs').style.display = 'none'; $('#outBtn').style.display = 'none'; $('#who').textContent = '';
+  $('#app').innerHTML = card(`<h3>로그인</h3><p>Google 계정(Gmail, 학교 계정 등)으로 로그인하세요.</p>` +
+    (msg ? `<div class="notice">${esc(msg)}</div>` : '') + `<div id="gbtn"></div>
+    <p class="mute small">처음 이용하는 분은 로그인 후 이름과 소속을 입력해 등록을 요청하면, 랩장 승인 후 이용할 수 있습니다.</p>`);
+  withGsi(() => {
+    google.accounts.id.renderButton($('#gbtn'), { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', locale: 'ko' });
+    google.accounts.id.prompt();
+  });
+}
+function signOut(msg) {
+  const manual = !msg;
+  TOKEN = null; B = null;
+  try { localStorage.removeItem(TOK_KEY); } catch (e) {}
+  if (manual && window.google && google.accounts) google.accounts.id.disableAutoSelect();
+  showSignIn(typeof msg === 'string' ? msg : '');
+}
+function toast(msg, bad) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'show' + (bad ? ' bad' : '');
+  clearTimeout(t._h); t._h = setTimeout(() => t.className = '', bad ? 6000 : 3000);
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function kd(ms) { const d = new Date(ms + KST); return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(), dow: d.getUTCDay(), h: d.getUTCHours(), mi: d.getUTCMinutes() }; }
+function fmtT(ms) { const k = kd(ms); return pad(k.h) + ':' + pad(k.mi); }
+function fmtD(ms) { const k = kd(ms); return k.m + '/' + k.d + '(' + DOW[k.dow] + ')'; }
+function fmtRange(a, b) { return fmtD(a) + ' ' + fmtT(a) + ' – ' + (fmtD(a) === fmtD(b - 1) ? '' : fmtD(b) + ' ') + (fmtT(b) === '00:00' && fmtD(a) === fmtD(b - 1) ? '24:00' : fmtT(b)); }
+function dayStart(ms) { return ms - ((ms + KST) % DAY); }
+function weekStart(ms) { return dayStart(ms) - ((kd(ms).dow + 6) % 7) * DAY; }
+function card(h) { return '<div class="card">' + h + '</div>'; }
+function eqById(id) { return B.equipment.find(e => e.id === id); }
+function curEq() { return eqById(cur.equip); }
+function hasLic(id) { return B.licenses.includes(id); }
+
+/* ── 시작 ── */
+async function init() {
+  if (!/^https:\/\/script\.google\.com\//.test(API_URL)) {
+    $('#app').innerHTML = card('<div class="notice bad">index.html 상단의 API_URL에 Apps Script 웹 앱 URL을 넣어 주세요.</div>'); return;
+  }
+  try {
+    CLIENT_ID = (await call('config')).clientId;
+    if (!CLIENT_ID) throw new Error('Settings 시트에 GOOGLE_CLIENT_ID를 입력해 주세요.');
+  } catch (e) { $('#app').innerHTML = card('<div class="notice bad">' + esc(e.message) + '</div>'); return; }
+  TOKEN = loadTok();
+  if (TOKEN) start(); else showSignIn();
+}
+async function start() {
+  $('#app').innerHTML = card('<span class="mute">불러오는 중…</span>');
+  try { B = await call('getBootstrap'); render(); }
+  catch (e) { if (e.code !== 'AUTH') $('#app').innerHTML = card('<div class="notice bad">' + esc(e.message) + '</div>'); }
+}
+function render() {
+  $('#outBtn').style.display = '';
+  if (B.state !== 'OK') return renderGate();
+  $('#tabs').style.display = '';
+  $('#who').textContent = B.user.name + ' · ' + B.user.roleLabel;
+  const tabs = [['book', '예약'], ['mine', '내 예약'], ['status', '장비 현황']];
+  if (B.user.manager) tabs.push(['admin', '관리']);
+  $('#tabs').innerHTML = tabs.map(t => `<button class="${cur.tab === t[0] ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
+  ({ book: renderBook, mine: renderMine, status: renderStatus, admin: renderAdmin })[cur.tab]();
+}
+function go(t) { cur.tab = t; render(); window.scrollTo(0, 0); }
+
+function renderGate() {
+  $('#tabs').style.display = 'none';
+  let h = '';
+  if (B.state === 'NO_EMAIL') h = '<h3>로그인 정보를 확인할 수 없습니다</h3><p>로그아웃 후 다시 로그인해 주세요.</p>';
+  else if (B.state === 'UNREGISTERED') h = `<h3>사용 등록 요청</h3><p class="mute small">${esc(B.email)}</p>
+    <label>이름</label><input id="rqName" maxlength="50" value="${esc(B.name || '')}">
+    <label>소속 연구실</label><input id="rqLab" maxlength="50" placeholder="예: 홍길동 교수 연구실">
+    <div class="row"><button class="pri" onclick="reqAccess(this)">등록 요청</button></div>
+    <p class="mute small">랩장 승인 후 이용할 수 있으며, 장비별 라이센스는 교육 이수 후 부여됩니다.</p>`;
+  else if (B.state === 'PENDING') h = `<h3>승인 대기 중</h3><p>${esc(B.name)}님의 등록 요청이 접수되었습니다. 랩장 승인 후 이용할 수 있습니다.</p>`;
+  else h = '<h3>비활성화된 계정입니다</h3><p>랩장에게 문의해 주세요.</p>';
+  $('#app').innerHTML = card(h);
+}
+async function reqAccess(btn) {
+  btn.disabled = true;
+  try { B = await call('requestAccess', $('#rqName').value, $('#rqLab').value); render(); }
+  catch (e) { toast(e.message, true); btn.disabled = false; }
+}
+
+/* ── 입력 필드 ── */
+function fieldsHtml(defs, v, pfx) {
+  v = v || {}; pfx = pfx || 'f_';
+  return defs.map(f => {
+    const id = pfx + f.key, val = v[f.key] == null ? '' : v[f.key], req = f.required ? ' *' : '';
+    if (f.type === 'checkbox') return `<label class="chk"><input type="checkbox" id="${id}" ${val ? 'checked' : ''}> ${esc(f.label)}</label>`;
+    if (f.type === 'textarea') return `<label for="${id}">${esc(f.label)}${req}</label><textarea id="${id}" rows="3">${esc(val)}</textarea>`;
+    return `<label for="${id}">${esc(f.label)}${req}</label><input id="${id}" type="${f.type}" ${f.type === 'number' ? 'inputmode="decimal"' : ''} ${f.step ? `step="${f.step}"` : ''} ${f.min != null ? `min="${f.min}"` : ''} placeholder="${esc(f.placeholder || '')}" value="${esc(val)}">`;
+  }).join('');
+}
+function readFields(defs, pfx) {
+  pfx = pfx || 'f_'; const o = {};
+  defs.forEach(f => { const el = document.getElementById(pfx + f.key); if (el) o[f.key] = f.type === 'checkbox' ? el.checked : el.value; });
+  return o;
+}
+
+/* ── 예약 탭 ── */
+function renderBook() {
+  const eqs = B.equipment;
+  if (!eqs.length) { $('#app').innerHTML = card('등록된 장비가 없습니다.'); return; }
+  if (!cur.equip || !eqById(cur.equip)) { const f = eqs.find(e => hasLic(e.id)); cur.equip = (f || eqs[0]).id; }
+  if (!cur.ws) { cur.ws = weekStart(Date.now()); cur.day = dayStart(Date.now()); }
+  const eq = curEq(), lic = hasLic(eq.id), today = dayStart(Date.now());
+  let h = `<div class="card"><label style="margin-top:0">장비</label><select onchange="pickEquip(this.value)">` +
+    eqs.map(e => `<option value="${e.id}" ${e.id === cur.equip ? 'selected' : ''}>${esc(e.name)}${hasLic(e.id) ? '' : ' (라이센스 없음)'}</option>`).join('') + `</select>`;
+  if (eq.notice) h += `<div class="notice ${eq.type === 'ASHER' ? 'bad' : ''}">${esc(eq.notice)}</div>`;
+  if (!lic) h += `<div class="notice bad">이 장비의 라이센스가 없어 예약할 수 없습니다. 랩장에게 요청하세요.</div>`;
+  h += `<div id="eqStatus"></div></div>`;
+  h += `<div class="card"><div class="weeknav"><button onclick="shiftWeek(-1)">‹</button><b>${fmtD(cur.ws)} – ${fmtD(cur.ws + 6 * DAY)}</b><button onclick="shiftWeek(1)">›</button></div>
+    <div class="days">` + [0, 1, 2, 3, 4, 5, 6].map(i => { const d = cur.ws + i * DAY, k = kd(d);
+      return `<button class="${d === cur.day ? 'on' : ''} ${d === today ? 'today' : ''}" onclick="pickDay(${d})">${DOW[k.dow]}<br><small>${k.d}</small></button>`; }).join('') +
+    `</div><div class="mute small">${B.user.power ? `오늘부터 ${B.powerDays}일 이내 예약 가능` : '이번 주 예약만 가능 · 다음 주는 일요일 24:00(월요일 00:00)에 열립니다'} · 빈 칸을 눌러 시작, 다른 칸을 눌러 끝 시간 선택</div>
+    <div id="slots" class="slots"><div class="slot mute">불러오는 중…</div></div></div><div id="formCard"></div>`;
+  $('#app').innerHTML = h;
+  loadWeek(true);
+}
+function pickEquip(id) { cur.equip = id; cur.sel = null; renderBook(); }
+function shiftWeek(n) { cur.ws += n * 7 * DAY; cur.day += n * 7 * DAY; renderBook(); }
+function pickDay(d) { cur.day = d; document.querySelectorAll('.days button').forEach((b, i) => b.classList.toggle('on', cur.ws + i * DAY === d)); drawSlots(true); }
+
+async function loadWeek(scroll) {
+  const tk = ++loadToken;
+  try {
+    const w = await call('getWeek', cur.equip, cur.ws);
+    if (tk !== loadToken) return;
+    cur.week = w; w.reservations.forEach(r => RES[r.id] = r);
+    drawSlots(scroll); drawStatus(); renderForm();
+  } catch (e) { toast(e.message, true); }
+}
+function windowFor() {
+  const now = Date.now();
+  if (B.user.power) return dayStart(now) + (B.powerDays + 1) * DAY;
+  return weekStart(now) + 7 * DAY;
+}
+function drawStatus() {
+  const s = cur.week && cur.week.status, el = $('#eqStatus');
+  if (!el || !s) return;
+  if (s.type === 'PARYLENE') {
+    const pct = Math.min(100, s.used / s.limit * 100);
+    el.innerHTML = `<div class="${s.needClean ? 'notice bad' : s.willNeedClean ? 'notice' : 'notice ok'}">누적 사용량 <b>${s.used} / ${s.limit} g</b>${s.planned ? ` (예약 포함 ${Math.round((s.used + s.planned) * 100) / 100} g)` : ''}${s.needClean ? ' — 청소 필요' : s.willNeedClean ? ' — 예정된 예약 진행 시 청소 필요' : ''}</div><div class="bar"><i class="${s.needClean ? 'full' : ''}" style="width:${pct}%"></i></div>`;
+  } else if (s.type === 'EVAP') {
+    el.innerHTML = goldLine(s);
+  } else el.innerHTML = '';
+}
+function drawSlots(scroll) {
+  const eq = curEq(), slot = eq.slotMinutes * 60000, n = Math.round(DAY / slot), el = $('#slots');
+  if (!el) return;
+  const res = (cur.week && cur.week.reservations) || [], hi = windowFor(), lic = hasLic(eq.id);
+  const now = Date.now(), nowFloor = now - ((now + KST) % slot);
+  let h = '';
+  for (let i = 0; i < n; i++) {
+    const s = cur.day + i * slot, e = s + slot, r = res.find(x => x.start < e && x.end > s);
+    let cls = 'slot', label = '', click = '';
+    if (r) {
+      cls += r.mine ? ' mine' : ' taken';
+      if (r.start >= s || i === 0) label = `<b>${esc(r.name)}</b> ${fmtRange(r.start, r.end)}` + (r.summary ? `<br><span class="mute">${esc(r.summary)}</span>` : '');
+      else label = '<span class="mute">│</span>';
+      if (r.canModify) { cls += ' click'; click = `onclick="openRes('${r.id}')"`; }
+    } else if (s < nowFloor || e > hi || !lic) cls += ' dis';
+    else { cls += ' free'; click = `onclick="tapSlot(${s})"`; if (cur.sel && s >= cur.sel.a && s < cur.sel.b) cls += ' sel'; }
+    h += `<div class="${cls}" ${click}><span class="t">${fmtT(s)}</span><span class="l">${label}</span></div>`;
+  }
+  el.innerHTML = h;
+  if (scroll) el.scrollTop = (8 * 3600e3 / slot) * (el.firstChild ? el.firstChild.offsetHeight : 36);
+}
+function tapSlot(s) {
+  const slot = curEq().slotMinutes * 60000;
+  if (!cur.sel || cur.sel.ext || s < cur.sel.a) cur.sel = { a: s, b: s + slot, ext: false };
+  else {
+    const b = s + slot, res = cur.week.reservations;
+    if (res.some(r => r.start < b && r.end > cur.sel.a)) { toast('중간에 다른 예약이 있습니다.', true); return; }
+    const eq = curEq();
+    if (eq.maxHours > 0 && b - cur.sel.a > eq.maxHours * 3600e3) { toast(`1회 최대 ${eq.maxHours}시간까지 예약할 수 있습니다.`, true); return; }
+    cur.sel.b = b; cur.sel.ext = true;
+  }
+  drawSlots(); renderForm(true);
+}
+function renderForm(focus) {
+  const c = $('#formCard'); if (!c) return;
+  if (!cur.sel) { c.innerHTML = ''; return; }
+  const eq = curEq(), defs = B.fieldDefs[eq.type] || [], prev = readFields(defs);
+  c.innerHTML = card(`<h3>${esc(eq.name)} 예약</h3><p><b>${fmtRange(cur.sel.a, cur.sel.b)}</b> <span class="mute">(${(cur.sel.b - cur.sel.a) / 36e5}시간)</span></p>` +
+    fieldsHtml(defs, prev) +
+    `<div class="row"><button class="pri" onclick="submitRes(this)">예약하기</button><button onclick="clearSel()">선택 취소</button></div>
+     <p class="mute small">자정을 넘기는 예약은 다음 날을 눌러 끝 칸을 선택하세요.</p>`);
+  if (eq.type === 'EVAP') wireGold();
+  if (focus) c.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function clearSel() { cur.sel = null; drawSlots(); renderForm(); }
+function goldLine(s) {
+  if (s.goldLeft == null) return `<div class="notice">금 재고가 아직 입력되지 않았습니다. 랩장이 장비 현황 탭에서 재고를 입력하면 자동으로 계산됩니다.</div>`;
+  const exp = s.goldLeft - (s.planned || 0);
+  return `<div class="notice ${exp < 0 ? 'bad' : 'ok'}">금 남은 개수 <b>${s.goldLeft}개</b>${s.planned ? ` · 예정된 예약 반영 시 <b>${exp}개</b>` : ''}</div>`;
+}
+function wireGold() {
+  const s = cur.week && cur.week.status, used = $('#f_goldUsed');
+  if (!used || !s || s.goldLeft == null) return;
+  const hint = document.createElement('div'); hint.className = 'mute small'; hint.style.marginTop = '4px';
+  used.after(hint);
+  const upd = () => {
+    const after = s.goldLeft - (s.planned || 0) - (Number(used.value) || 0);
+    hint.innerHTML = `이번 사용 후 예상 남은 개수: <b style="color:${after < 0 ? 'var(--bad)' : 'inherit'}">${after}개</b>${after < 0 ? ' — 재고 부족, 랩장에게 알려주세요' : ''}`;
+  };
+  used.addEventListener('input', upd); upd();
+}
+async function submitRes(btn) {
+  const eq = curEq(); btn.disabled = true;
+  try {
+    await call('createReservation', { equipId: eq.id, start: cur.sel.a, end: cur.sel.b, details: readFields(B.fieldDefs[eq.type] || []) });
+    toast('예약되었습니다.'); cur.sel = null; await loadWeek();
+  } catch (e) { toast(e.message, true); btn.disabled = false; }
+}
+
+/* ── 예약 상세 (수정/취소) ── */
+function resCard(r) {
+  const eq = eqById(r.equipId) || { name: r.equipId, type: 'MEASURE' }, defs = B.fieldDefs[eq.type] || [], pfx = 'f_' + r.id + '_';
+  return card(`<h3>${esc(eq.name)}</h3><p><b>${fmtRange(r.start, r.end)}</b> · ${esc(r.name)}</p>` +
+    (defs.length ? fieldsHtml(defs, r.details, pfx) : '') +
+    `<div class="row">${defs.length && r.canModify ? `<button onclick="saveDetails('${r.id}',this)">입력값 수정</button>` : ''}` +
+    `${r.canModify && (r.end > Date.now() || B.user.manager) ? `<button class="danger" onclick="cancelRes('${r.id}',this)">예약 취소</button>` : ''}</div>` +
+    (r.end <= Date.now() && defs.length ? '<p class="mute small">실제 사용값과 다르면 수정해 주세요.</p>' : ''));
+}
+function openRes(id) {
+  const c = $('#formCard'); cur.sel = null; drawSlots();
+  c.innerHTML = resCard(RES[id]) ; c.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+async function saveDetails(id, btn) {
+  const r = RES[id], eq = eqById(r.equipId); btn.disabled = true;
+  try { await call('updateDetails', id, readFields(B.fieldDefs[eq.type] || [], 'f_' + id + '_')); toast('수정되었습니다.'); refresh(); }
+  catch (e) { toast(e.message, true); btn.disabled = false; }
+}
+async function cancelRes(id, btn) {
+  if (!confirm('이 예약을 취소할까요?')) return;
+  btn.disabled = true;
+  try { await call('cancelReservation', id); toast('취소되었습니다.'); refresh(); }
+  catch (e) { toast(e.message, true); btn.disabled = false; }
+}
+function refresh() { if (cur.tab === 'book') { $('#formCard').innerHTML = ''; loadWeek(); } else render(); }
+
+/* ── 내 예약 ── */
+async function renderMine() {
+  $('#app').innerHTML = card('<span class="mute">불러오는 중…</span>');
+  try {
+    const d = await call('myReservations');
+    d.upcoming.concat(d.past).forEach(r => RES[r.id] = r);
+    $('#app').innerHTML = '<h2 class="sec">예정된 예약</h2>' + (d.upcoming.map(resCard).join('') || card('<span class="mute">예정된 예약이 없습니다.</span>')) +
+      '<h2 class="sec">최근 30일 사용</h2>' + (d.past.map(resCard).join('') || card('<span class="mute">없음</span>'));
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ── 장비 현황 ── */
+function fmtDT(ms) { const k = kd(ms); return k.y + '.' + pad(k.m) + '.' + pad(k.d) + ' ' + fmtT(ms); }
+function histRows(list) {
+  if (!list || !list.length) return '<div class="mute small">기록 없음</div>';
+  return list.map(m => `<div class="slot" style="cursor:default"><span class="t" style="width:118px">${fmtDT(m.time)}</span>
+    <span class="l"><b>${esc(m.label)}</b>${m.action === 'GOLD_ADD' ? ' +' + esc(m.value) + '개' : ''} · ${esc(m.name)}<br><span class="mute">${esc(m.memo)}</span></span></div>`).join('');
+}
+function histBlock(x) {
+  return `<h2 class="sec" style="margin-top:16px">기록 이력</h2><div class="slots" id="hist_${x.id}" style="max-height:280px">${histRows(x.history)}</div>
+    ${x.history && x.history.length >= 20 ? `<div class="row"><button onclick="moreHist('${x.id}',this)">전체 이력 보기</button></div>` : ''}`;
+}
+async function renderStatus() {
+  $('#app').innerHTML = card('<span class="mute">불러오는 중…</span>');
+  try {
+    const list = await call('getStatusAll'), mgr = B.user.manager;
+    let h = list.map(x => {
+      const s = x.status;
+      if (s.type === 'PARYLENE') {
+        const pct = Math.min(100, s.used / s.limit * 100);
+        return card(`<h3>${esc(x.name)} ${s.needClean ? '<span class="badge bad">청소 필요</span>' : ''}</h3>
+          <div>누적 사용량 <b>${s.used} / ${s.limit} g</b> <span class="mute small">(예정 예약 ${s.planned} g)</span></div>
+          <div class="bar"><i class="${s.needClean ? 'full' : ''}" style="width:${pct}%"></i></div>
+          <div class="mute small">마지막 청소: ${s.lastClean ? fmtDT(s.lastClean) : '기록 없음'}</div>
+          ${mgr ? `<label>메모 (선택)</label><input id="memo_${x.id}" maxlength="100" placeholder="예: 챔버·보트 세척">
+            <div class="row"><button class="pri" onclick="maint('${x.id}','CLEAN',this)">청소 완료 기록</button></div>` + histBlock(x) : ''}`);
+      }
+      return card(`<h3>${esc(x.name)} · 금 재고</h3>${goldLine(s)}
+        <div class="mute small" style="margin-top:6px">예약할 때 입력한 '금 사용 개수'만큼 자동으로 차감됩니다 (예약 시작 시각 기준).</div>
+        ${mgr ? `<div class="grid2"><div><label>개수</label><input id="gold_${x.id}" type="number" min="0" step="1" inputmode="numeric"></div>
+            <div><label>메모 (선택)</label><input id="memo_${x.id}" maxlength="100" placeholder="예: 구매 입고"></div></div>
+          <div class="row"><button class="pri" onclick="maint('${x.id}','GOLD_ADD',this)">보충 (+개수)</button>
+            <button onclick="maint('${x.id}','GOLD_SET',this)">재고 직접 입력 (=개수)</button></div>
+          <div class="mute small" style="margin-top:6px">실제 개수를 세어 맞출 때는 '재고 직접 입력'을 쓰세요.</div>` + histBlock(x) : ''}`);
+    }).join('');
+    h += card('<h3>내 라이센스</h3>' + (B.licenses.length ? B.licenses.map(id => `<span class="badge">${esc((eqById(id) || { name: id }).name)}</span>`).join('') : '<span class="mute">없음</span>'));
+    $('#app').innerHTML = h;
+  } catch (e) { toast(e.message, true); }
+}
+async function moreHist(id, btn) {
+  btn.disabled = true;
+  try { $('#hist_' + id).innerHTML = histRows(await call('getMaintHistory', id)); btn.remove(); }
+  catch (e) { toast(e.message, true); btn.disabled = false; }
+}
+async function maint(id, action, btn) {
+  const memo = ($('#memo_' + id) || {}).value || '';
+  let value;
+  if (action === 'CLEAN') {
+    if (!confirm('청소 완료를 기록하면 누적 사용량이 0부터 다시 계산됩니다. 기록할까요?')) return;
+  } else {
+    value = ($('#gold_' + id) || {}).value;
+    if (value === '' || value == null) { toast('개수를 입력해 주세요.', true); return; }
+    if (!confirm(action === 'GOLD_ADD' ? `금 ${value}개를 보충으로 기록할까요?` : `현재 금 재고를 ${value}개로 기록할까요?`)) return;
+  }
+  btn.disabled = true;
+  try { await call('markMaintenance', id, action, value, memo); toast('기록되었습니다.'); renderStatus(); }
+  catch (e) { toast(e.message, true); btn.disabled = false; }
+}
+
+/* ── 관리 ── */
+let AD = null;
+async function renderAdmin() {
+  $('#app').innerHTML = card('<span class="mute">불러오는 중…</span>');
+  try { AD = await call('adminData'); drawAdmin(); } catch (e) { toast(e.message, true); }
+}
+function roleOpts(sel) {
+  const all = [['GENERAL', '일반 유저 (타 랩)'], ['POWER', '파워 유저 (우리 랩)'], ['LABHEAD', '랩장'], ['ADMIN', '관리자']];
+  const allowed = AD.myRole === 'ADMIN' ? all : all.slice(0, 2);
+  const list = allowed.some(r => r[0] === sel) || !sel || sel === 'PENDING' ? allowed : allowed.concat([[sel, sel]]);
+  return list.map(r => `<option value="${r[0]}" ${r[0] === sel ? 'selected' : ''}>${r[1]}</option>`).join('');
+}
+function drawAdmin(filter) {
+  filter = (filter || '').toLowerCase();
+  const pend = AD.users.filter(u => u.role === 'PENDING' && u.active);
+  const act = AD.users.filter(u => u.role !== 'PENDING' && u.active);
+  let h = '';
+  h += '<h2 class="sec">승인 대기 (' + pend.length + ')</h2>' + card(pend.length ? pend.map((u, i) => `<div class="urow">
+      <b>${esc(u.name)}</b> <span class="mute small">${esc(u.lab)} · ${esc(u.email)}</span>
+      <div class="row"><select id="pr_${i}" style="flex:1">${roleOpts('GENERAL')}</select>
+      <button class="pri" onclick="approve(${i},this)">승인</button><button class="danger" onclick="reject(${i},this)">거절</button></div></div>`).join('') : '<span class="mute">없음</span>');
+
+  h += '<h2 class="sec">라이센스 부여</h2>' + card(`<label style="margin-top:0">사용자</label><select id="lgUser">${act.map(u => `<option value="${esc(u.email)}">${esc(u.name)} · ${esc(u.lab)} (${esc(u.email)})</option>`).join('')}</select>
+      <label>장비</label><div class="eqchk">${B.equipment.map(e => `<label><input type="checkbox" value="${e.id}" class="lgEq"> ${esc(e.name)}</label>`).join('')}</div>
+      <label>만료일 (선택)</label><input type="date" id="lgExp">
+      <div class="row"><button class="pri" onclick="grant(this)">라이센스 부여</button></div>`);
+
+  h += '<h2 class="sec">사용자 추가</h2>' + card(`<div class="grid2"><div><label style="margin-top:0">이메일</label><input id="nuEmail" type="email"></div><div><label style="margin-top:0">이름</label><input id="nuName"></div></div>
+      <div class="grid2"><div><label>소속 랩</label><input id="nuLab"></div><div><label>역할</label><select id="nuRole">${roleOpts('GENERAL')}</select></div></div>
+      <div class="row"><button class="pri" onclick="addUser(this)">추가</button></div>`);
+
+  const shown = act.filter(u => !filter || (u.name + u.email + u.lab).toLowerCase().includes(filter));
+  h += '<h2 class="sec">사용자 · 라이센스 (' + act.length + ')</h2>' + card(`<input placeholder="이름, 이메일, 랩으로 검색" value="${esc(filter)}" oninput="drawAdminDebounced(this.value)">` +
+    shown.map(u => { const k = AD.users.indexOf(u); return `<div class="urow">
+      <b>${esc(u.name)}</b> <span class="mute small">${esc(u.lab)} · ${esc(u.email)}</span>
+      <div>${u.licenses.length ? u.licenses.map(l => `<span class="badge">${esc((eqById(l.equipId) || { name: l.equipId }).name)}${l.expiresAt ? ' ~' + l.expiresAt : ''}<x onclick="revoke(${k},'${l.equipId}')">×</x></span>`).join('') : '<span class="mute small">라이센스 없음</span>'}</div>
+      <div class="row"><select id="ur_${k}" style="flex:1">${roleOpts(u.role)}</select><button onclick="saveRole(${k},this)">역할 저장</button><button class="danger" onclick="deactivate(${k},this)">비활성화</button></div></div>`; }).join(''));
+  $('#app').innerHTML = h;
+}
+let _adT;
+function drawAdminDebounced(v) { clearTimeout(_adT); _adT = setTimeout(() => { drawAdmin(v); const i = document.querySelector('#app input[placeholder^="이름"]'); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } }, 250); }
+async function adminDo(btn, fn, okMsg) {
+  if (btn) btn.disabled = true;
+  try { await fn(); toast(okMsg); renderAdmin(); } catch (e) { toast(e.message, true); if (btn) btn.disabled = false; }
+}
+function pending() { return AD.users.filter(u => u.role === 'PENDING' && u.active); }
+function approve(i, btn) { const u = pending()[i]; adminDo(btn, () => call('saveUser', { email: u.email, role: $('#pr_' + i).value }), '승인되었습니다.'); }
+function reject(i, btn) { const u = pending()[i]; if (!confirm(u.name + ' 요청을 거절할까요?')) return; adminDo(btn, () => call('saveUser', { email: u.email, role: 'PENDING', active: false }), '거절되었습니다.'); }
+function grant(btn) {
+  const ids = [...document.querySelectorAll('.lgEq:checked')].map(x => x.value);
+  adminDo(btn, () => call('grantLicense', $('#lgUser').value, ids, $('#lgExp').value), '라이센스가 부여되었습니다.');
+}
+function revoke(k, eqId) { const u = AD.users[k]; if (!confirm(`${u.name}의 ${(eqById(eqId) || { name: eqId }).name} 라이센스를 회수할까요?`)) return; adminDo(null, () => call('revokeLicense', u.email, eqId), '회수되었습니다.'); }
+function saveRole(k, btn) { const u = AD.users[k]; adminDo(btn, () => call('saveUser', { email: u.email, role: $('#ur_' + k).value }), '저장되었습니다.'); }
+function deactivate(k, btn) { const u = AD.users[k]; if (!confirm(u.name + ' 계정을 비활성화할까요?')) return; adminDo(btn, () => call('saveUser', { email: u.email, role: u.role, active: false }), '비활성화되었습니다.'); }
+function addUser(btn) { adminDo(btn, () => call('saveUser', { email: $('#nuEmail').value, name: $('#nuName').value, lab: $('#nuLab').value, role: $('#nuRole').value }), '추가되었습니다.'); }
+
+init();
+</script>
+</body>
+</html>
